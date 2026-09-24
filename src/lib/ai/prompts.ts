@@ -50,13 +50,14 @@ export const COMPARE_FORMAT = `FIELD GUIDE (QAP comparative assessment)
 - confidence: band, at least 3 reasons, exactly 3 flip_risks. Coverage asymmetry between targets is a required reason when present.`;
 
 export const QUICK_FORMAT = `FIELD GUIDE (quick analysis)
-- headline: one plain sentence naming what the reader most needs to know. Cite it.
-- points: 3 to 5 bullets, each one or two sentences, each cited.
-- five_w: who, what, where, when, why, how. Fill only what the cited material supports. Write "Not stated" where it is not. For non-article tasks, use empty strings.
-- so_what: one or two sentences on why this matters for security or risk decisions.
-- watch: 2 to 4 concrete things to monitor next.
+- headline: one plain sentence stating the specific analytic takeaway from the selected subject. It must name the real actor/event in the evidence, not a generic label. Cite it.
+- points: 3 to 5 specific bullets. Each must state an actual fact, corroboration, contradiction, or bounded inference from the supplied evidence. Cite each bullet.
+- five_w: who, what, where, when, why, how. For article analysis, item [1] controls this section. Fill only what [1] explicitly states or clearly supports. Write "Not stated" when [1] does not provide the element. Never write generic substitutes such as "Unspecified entities", "reported activities", or "unspecified locations".
+- so_what: one or two specific sentences explaining the security, governance, humanitarian, or strategic implication supported by the evidence. Cite factual premises. If the implication cannot be supported, say "Insufficient evidence to assess implications."
+- watch: 2 to 4 concrete collection indicators tied to unresolved questions in this evidence. Name what to monitor. Do not write generic phrases such as "monitor developments" or "track baseline shifts".
 - confidence: high | moderate | low, never above the ceiling in the task.
-- caveats: 2 or 3 honest limits (headline-only basis, single stream, structural data lag, coverage bias).`;
+- caveats: 2 or 3 honest limits tied to this evidence base.
+- Never use placeholders such as "Event 1", "Event 2", "Item 1", "Unspecified", "under review", "[Bn]", "[n]", or template filler. If evidence is insufficient, say exactly what is not established.`;
 
 function fmtEvidence(ev: EvidenceItem[]): string {
   return ev
@@ -146,7 +147,7 @@ ${COMPARE_FORMAT}`;
 export function quickUser(args: { kind: "article" | "country" | "feed"; label: string; window: WindowKey; evidence: EvidenceItem[]; baselines: Baseline[]; metrics: EvidenceMetrics; ceiling: { band: string; reason: string }; statsDigest?: string; now: Date }): string {
   const task =
     args.kind === "article"
-      ? `Analyse item [1] as an analyst would on first read: 5W1H from what [1] states, what it does and does not establish, and how the related items [2] onward corroborate, contradict or add context. Never claim to have read the full article; you have the headline and excerpt only.`
+      ? `Analyse item [1] as an analyst would on first read. Item [1] is the primary subject and must control the answer. Extract 5W1H only from [1]. Use [2] onward only when they are directly relevant to the same actor, event, issue, or immediate context. Explicitly distinguish corroboration, contradiction, and background context. Ignore a related item rather than forcing it into the analysis. Never claim to have read the full article; you have the headline and excerpt only. Never output template or placeholder language.`
       : args.kind === "country"
         ? `Produce a quick country brief for ${args.label}: what changed in the window, what it may mean, and what to watch. Use the structural baselines only as context.`
         : `Produce a quick digest of the current filtered feed (${args.label}): the main storylines, cross-cutting patterns and what deserves analyst attention. Do not treat reporting volume as severity.`;
