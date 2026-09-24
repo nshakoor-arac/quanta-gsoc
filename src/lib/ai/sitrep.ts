@@ -409,18 +409,33 @@ function titleTerms(a: Article): Set<string> {
   );
 }
 
-function articleRelatedness(focus: Article, candidate: Article): { score: number; overlap: number; titleAnchorOverlap: number } {
+function articleRelatedness(focus: Article, candidate: Article): { score: number; overlap: number; titleAnchorOverlap: number; specificAnchorOverlap: number } {
   const a = articleTerms(focus);
   const b = articleTerms(candidate);
   const anchors = titleTerms(focus);
+  const generic = new Set(["war","wars","peace","effort","efforts","statement","statements","criticism","conflict","conflicts","government","governments","army","military","attack","attacks","violence","latest","official","officials"]);
+  const countryTerms = new Set(
+    focus.countries
+      .map((iso2) => BY_ISO2[iso2]?.name ?? "")
+      .join(" ")
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter((t) => t.length > 3)
+  );
   let overlap = 0;
   let titleAnchorOverlap = 0;
+  let specificAnchorOverlap = 0;
   for (const t of a) if (b.has(t)) overlap++;
-  for (const t of anchors) if (b.has(t)) titleAnchorOverlap++;
+  for (const t of anchors) {
+    if (!b.has(t)) continue;
+    titleAnchorOverlap++;
+    if (!generic.has(t) && !countryTerms.has(t)) specificAnchorOverlap++;
+  }
   const lexical = a.size ? overlap / a.size : 0;
   const country = focus.countries.some((c) => candidate.countries.includes(c)) ? 0.12 : 0;
   const theme = focus.themes.some((t) => candidate.themes.includes(t)) ? 0.05 : 0;
-  return { score: lexical + country + theme, overlap, titleAnchorOverlap };
+  return { score: lexical + country + theme, overlap, titleAnchorOverlap, specificAnchorOverlap };
 }
 
 export interface QuickInput {
@@ -459,7 +474,7 @@ export async function runQuick(input: QuickInput): Promise<{ report: Quick; meta
       // Require at least two meaningful terms from the selected item's title to recur
       // in the candidate title/excerpt. This prevents broad "Iran war" context from
       // inflating corroboration for a specific Hormuz transit report.
-      .filter((x) => x.titleAnchorOverlap >= 2 && x.overlap >= 2)
+      .filter((x) => x.titleAnchorOverlap >= 2 && x.specificAnchorOverlap >= 1 && x.overlap >= 2)
       .map((x) => x.r);
     const directRel = selectEvidence(directCandidates, { max: 3, perFamily: 1, startN: 2 });
     const directIds = new Set(directRel.map((e) => e.article.id));
