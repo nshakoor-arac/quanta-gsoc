@@ -42,7 +42,8 @@ export default function StatusPanel({ onRefreshed }: { onRefreshed: () => void }
             <tr><td>{check(!!cfg.ai)}</td><td>Mercury AI key</td><td className="faint">{s.ai.model}</td></tr>
             <tr><td>{check(s.store === "supabase")}</td><td>Database</td><td className="faint">{s.store === "supabase" ? "Supabase (persistent)" : "Memory only, data resets on restart"}</td></tr>
             <tr><td>{check(!!cfg.accessCode && !!cfg.sessionSecret)}</td><td>Access code</td><td className="faint">{cfg.accessCode && cfg.sessionSecret ? "set" : "not set"}</td></tr>
-            <tr><td>{check(!!cfg.reliefweb)}</td><td>ReliefWeb app name</td><td className="faint">{cfg.reliefweb ? "set" : "optional, not set"}</td></tr>
+            <tr><td>{check(!!cfg.reliefweb)}</td><td>ReliefWeb app name</td><td className="faint">{cfg.reliefweb ? "set" : "recommended, not set"}</td></tr>
+            <tr><td>{check(!!cfg.hapi)}</td><td>HDX HAPI app identifier</td><td className="faint">{cfg.hapi ? "set" : "recommended, not set"}</td></tr>
             <tr><td>{check(!!cfg.cron)}</td><td>Scheduled refresh secret</td><td className="faint">{cfg.cron ? "set" : "optional, not set"}</td></tr>
           </tbody></table>
         </Card>

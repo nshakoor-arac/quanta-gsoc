@@ -36,6 +36,9 @@ export const env = {
   get reliefwebAppname() {
     return process.env.RELIEFWEB_APPNAME ?? "";
   },
+  get hapiAppIdentifier() {
+    return process.env.HAPI_APP_IDENTIFIER ?? "";
+  },
   get gdeltLang() {
     return process.env.GDELT_SOURCE_LANG || "english";
   },
@@ -57,6 +60,7 @@ export function configStatus() {
     ai: Boolean(env.inceptionKey),
     database: Boolean(env.supabaseUrl && env.supabaseKey),
     reliefweb: Boolean(env.reliefwebAppname),
+    hapi: Boolean(env.hapiAppIdentifier),
     cron: Boolean(env.cronSecret),
   };
 }

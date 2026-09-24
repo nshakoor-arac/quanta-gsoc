@@ -2,7 +2,7 @@
 
 Global Security Operations Console. A private web app for security and geopolitical risk analysts that:
 
-- collects open-source news from about 30 curated feeds, plus GDELT and (optionally) ReliefWeb;
+- collects open-source news from about 30 curated feeds and ReliefWeb, with GDELT retained as a supplemental discovery source;
 - tags every item by country, region and theme with transparent keyword rules;
 - shows coverage on a world map, in analytics views and in a searchable News Network aggregator with click-through to each source;
 - generates Quanta Analytica Process (QAP) executive SitReps and 2 to 4 target comparisons with Inception Mercury 2.5, for a country, a region, a theme or the whole stream;
@@ -22,7 +22,7 @@ Produced under the Quanta Analytica Process | MNS Consulting workflow, in partne
 | Independence test | Outlets that draw on one upstream count as one stream. State-affiliated media are excluded from the count. |
 | Confidence ceiling | The app caps the model's confidence when there are too few items or independent streams, and says so in the report. |
 | Provisional source bands | Green, Amber and Red come from a source register and are labelled provisional. Analysts confirm or override them. |
-| Baselines kept separate | World Bank governance scores are shown as lagged structural context, never as evidence of a current event. |
+| Baselines kept separate | World Bank governance scores and HDX HAPI humanitarian/conflict indicators are shown as contextual data, never as current-event article evidence. |
 | Volume is not severity | Maps and charts carry this warning. |
 | House style | Reports contain no em or en dashes. The exporter enforces this. |
 

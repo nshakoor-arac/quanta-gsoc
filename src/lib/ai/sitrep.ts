@@ -3,7 +3,7 @@ import { WINDOW_HOURS } from "../types";
 import { getStore } from "../store";
 import { BY_ISO2, REGIONS } from "../geo/countries";
 import { themeLabel } from "../taxonomy";
-import { baselinesFor } from "../sources/worldbank";
+import { baselinesFor } from "../sources/context";
 import { ingestGdelt, ingestReliefweb, refreshIfStale } from "../sources/ingest";
 import { env } from "../env";
 import { aggregate } from "../analytics";
@@ -83,19 +83,40 @@ export async function gatherCandidates(t: ScopeTarget, w: WindowKey): Promise<{ 
     articles = await store.queryArticles(queryFor(t, w));
   }
   if (t.type !== "global" && articles.length < 30) {
-    const jobs: Promise<unknown>[] = [];
     const span = gdeltSpan(w);
     if (t.type === "country") {
-      jobs.push(ingestGdelt({ kind: "country", iso2: t.id, timespan: span }).then((r) => toppedUp.push(`gdelt:${r.ok ? r.stored : "failed"}`)));
-      if (env.reliefwebAppname) jobs.push(ingestReliefweb(t.id).then((r) => toppedUp.push(`reliefweb:${r.ok ? r.stored : "failed"}`)));
+      // ReliefWeb is the preferred live top-up for country analysis.
+      if (env.reliefwebAppname) {
+        const rw = await Promise.race([
+          ingestReliefweb(t.id),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 14000)),
+        ]).catch(() => null);
+        if (rw) toppedUp.push(`reliefweb:${rw.ok ? rw.stored : "failed"}`);
+        articles = await store.queryArticles(queryFor(t, w));
+      }
+      // GDELT is supplemental only. Use it if curated RSS plus ReliefWeb remain thin.
+      if (articles.length < 15) {
+        const gd = await Promise.race([
+          ingestGdelt({ kind: "country", iso2: t.id, timespan: span }),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 14000)),
+        ]).catch(() => null);
+        if (gd) toppedUp.push(`gdelt:${gd.ok ? gd.stored : "failed"}`);
+      }
     } else if (t.type === "region") {
-      jobs.push(ingestGdelt({ kind: "region", region: t.id, timespan: span }).then((r) => toppedUp.push(`gdelt:${r.ok ? r.stored : "failed"}`)));
+      const gd = await Promise.race([
+        ingestGdelt({ kind: "region", region: t.id, timespan: span }),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 14000)),
+      ]).catch(() => null);
+      if (gd) toppedUp.push(`gdelt:${gd.ok ? gd.stored : "failed"}`);
     } else if (t.type === "theme") {
-      jobs.push(
-        (t.within ? ingestGdelt({ kind: "theme-within", theme: t.id as ThemeId, within: t.within, timespan: span }) : ingestGdelt({ kind: "theme", theme: t.id as ThemeId, timespan: span })).then((r) => toppedUp.push(`gdelt:${r.ok ? r.stored : "failed"}`))
-      );
+      const gd = await Promise.race([
+        t.within
+          ? ingestGdelt({ kind: "theme-within", theme: t.id as ThemeId, within: t.within, timespan: span })
+          : ingestGdelt({ kind: "theme", theme: t.id as ThemeId, timespan: span }),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 14000)),
+      ]).catch(() => null);
+      if (gd) toppedUp.push(`gdelt:${gd.ok ? gd.stored : "failed"}`);
     }
-    await Promise.race([Promise.allSettled(jobs), new Promise((r) => setTimeout(r, 28000))]);
     articles = await store.queryArticles(queryFor(t, w));
   }
   // GDELT country/region queries can return items whose text does not name the country; keep strict tag matches for scoped runs.

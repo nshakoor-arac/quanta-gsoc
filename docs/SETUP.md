@@ -60,7 +60,8 @@ The service_role key is a master key. Never paste it into a chat, a public file 
 | `SUPABASE_SERVICE_ROLE_KEY` | From Part 2 |
 | `AI_DAILY_LIMIT` | `80` (maximum AI calls per rolling 24 hours, all analysts combined) |
 | `CRON_SECRET` | Any 30 or more random characters. Enables the daily refresh. |
-| `RELIEFWEB_APPNAME` | Optional. See Part 6. |
+| `RELIEFWEB_APPNAME` | Your approved ReliefWeb app name. Recommended for humanitarian evidence. |
+| `HAPI_APP_IDENTIFIER` | Your HDX HAPI app identifier. Recommended for structured conflict and humanitarian context. |
 
 4. Click **Deploy**. Wait for the confetti screen, then click **Continue to Dashboard** and open the site address.
 5. Sign in with your access code.
@@ -83,7 +84,9 @@ If the report step fails with a message about the AI service, the message names 
 
 ## Part 6. Optional extras
 
-**ReliefWeb.** Request an app name at apidoc.reliefweb.int, wait for approval, then add it as `RELIEFWEB_APPNAME` in Vercel and redeploy. Without it the app skips ReliefWeb.
+**ReliefWeb.** Add your approved app name as `RELIEFWEB_APPNAME` in Vercel. ReliefWeb is the preferred country-level live top-up before GDELT.
+
+**HDX HAPI.** Add your HAPI app identifier as `HAPI_APP_IDENTIFIER` in Vercel. GSOC uses HAPI for structured country context including ACLED monthly conflict events/fatalities, OCHA People in Need, and IPC Phase 3+ food insecurity. These values remain separate from current-event article evidence.
 
 **Daily refresh.** With `CRON_SECRET` set, Vercel refreshes the feeds every day at 06:00 UTC. The app also refreshes itself when someone opens it and the data is more than 12 minutes old. Vercel's free plan allows only daily schedules, which is what this uses.
 
