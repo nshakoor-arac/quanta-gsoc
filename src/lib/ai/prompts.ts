@@ -102,7 +102,6 @@ NOW (UTC): ${args.now.toISOString().slice(0, 16)}Z
 
 EVIDENCE BASE METRICS (computed by the application, do not alter):
 ${fmtMetrics(args.metrics, WINDOW_LABEL[args.window])}
-${args.kind === "article" ? `These metrics count DIRECT evidence only. Contextual items are excluded from confidence and independence calculations.` : ""}
 
 CONFIDENCE CEILING (application rule): overall confidence must not exceed "${args.ceiling.band}" because ${args.ceiling.reason}.
 
@@ -159,6 +158,7 @@ NOW (UTC): ${args.now.toISOString().slice(0, 16)}Z
 
 EVIDENCE BASE METRICS (computed by the application, do not alter):
 ${fmtMetrics(args.metrics, WINDOW_LABEL[args.window])}
+${args.kind === "article" ? `These metrics count DIRECT evidence only. Contextual items are excluded from confidence and independence calculations.` : ""}
 
 CONFIDENCE CEILING (application rule): confidence must not exceed "${args.ceiling.band}" because ${args.ceiling.reason}.
 ${args.statsDigest ? `\nFEED STATISTICS (computed by the application from the same filtered set):\n${args.statsDigest}\n` : ""}
