@@ -250,6 +250,7 @@ export interface ReferenceRow {
   url: string;
   family: string;
   pinned: boolean;
+  role?: "direct" | "context";
 }
 
 export function buildReferences(ev: EvidenceItem[]): ReferenceRow[] {
@@ -422,6 +423,8 @@ export async function runQuick(input: QuickInput): Promise<{ report: Quick; meta
   const now = new Date();
   let label = "";
   let evidence: EvidenceItem[] = [];
+  let directEvidence: EvidenceItem[] | null = null;
+  let directCount = 0;
   let baselines: Baseline[] = [];
   let statsDigest: string | undefined;
   const since = sinceISO(input.window);
@@ -429,14 +432,29 @@ export async function runQuick(input: QuickInput): Promise<{ report: Quick; meta
     const a = input.article;
     label = a.title.slice(0, 120);
     const related = await store.queryArticles({ sinceISO: sinceISO("7d"), countries: a.countries.length ? a.countries.slice(0, 2) : undefined, themes: !a.countries.length && a.themes.length ? a.themes.slice(0, 2) : undefined, limit: 200 });
-    const relevant = related
+    const scored = related
       .filter((r) => r.id !== a.id)
       .map((r) => ({ r, ...articleRelatedness(a, r) }))
       .filter((x) => x.overlap >= 2 && x.score >= 0.2)
-      .sort((x, y) => y.score - x.score)
+      .sort((x, y) => y.score - x.score);
+
+    // DIRECT evidence must be tightly aligned to the same event/issue. CONTEXT may
+    // illuminate the environment but must never inflate corroboration or confidence.
+    const directCandidates = scored
+      .filter((x) => x.overlap >= 3 || x.score >= 0.32)
       .map((x) => x.r);
-    const rel = selectEvidence(relevant, { max: 5, perFamily: 2, startN: 2 });
-    evidence = [{ n: 1, article: a, bandUsed: a.band, pinned: true }, ...rel];
+    const directRel = selectEvidence(directCandidates, { max: 3, perFamily: 1, startN: 2 });
+    const directIds = new Set(directRel.map((e) => e.article.id));
+
+    const contextCandidates = scored
+      .filter((x) => !directIds.has(x.r.id))
+      .map((x) => x.r);
+    const contextStart = 2 + directRel.length;
+    const contextRel = selectEvidence(contextCandidates, { max: 3, perFamily: 1, startN: contextStart });
+
+    directEvidence = [{ n: 1, article: a, bandUsed: a.band, pinned: true }, ...directRel];
+    directCount = directEvidence.length;
+    evidence = [...directEvidence, ...contextRel];
     baselines = await baselinesFor(a.countries.slice(0, 1));
   } else if (input.kind === "country" && input.iso2 && BY_ISO2[input.iso2]) {
     label = BY_ISO2[input.iso2].name;
@@ -463,10 +481,10 @@ export async function runQuick(input: QuickInput): Promise<{ report: Quick; meta
     throw new Error("Nothing to analyse for that request.");
   }
   if (!evidence.length) throw new Error("No evidence items are available for this request yet. Refresh the sources and try again.");
-  const metrics = computeMetrics(evidence);
+  const metrics = computeMetrics(directEvidence ?? evidence);
   const ceiling = confidenceCeiling(metrics);
   const system = `${KERNEL}\n\n${QUICK_SYSTEM_NOTE}`;
-  const user = quickUser({ kind: input.kind, label, window: input.window, evidence, baselines, metrics, ceiling, statsDigest, now });
+  const user = quickUser({ kind: input.kind, label, window: input.window, evidence, baselines, metrics, ceiling, statsDigest, now, directCount });
   const res = await complete({ system, user, maxTokens: 2200, effort: "low", temperature: 0.2, schema: { name: "qap_quick", schema: jsonSchemaOf(QuickSchema) } });
   const { data, usageExtra } = await parseWithRepair(QuickSchema, "qap_quick", res.text, system);
   const clean = deepSanitize(data);
@@ -489,7 +507,7 @@ export async function runQuick(input: QuickInput): Promise<{ report: Quick; meta
       confidenceAdjusted: { modelBand: data.confidence, appliedBand: adj.band, capped: adj.capped, reason: adj.reason },
       citation: audited.stats,
       baselines,
-      references: buildReferences(evidence),
+      references: buildReferences(evidence).map((r) => input.kind === "article" ? { ...r, role: r.n <= directCount ? "direct" as const : "context" as const } : r),
     },
   };
 }

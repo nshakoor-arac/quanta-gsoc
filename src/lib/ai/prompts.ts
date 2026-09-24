@@ -102,6 +102,7 @@ NOW (UTC): ${args.now.toISOString().slice(0, 16)}Z
 
 EVIDENCE BASE METRICS (computed by the application, do not alter):
 ${fmtMetrics(args.metrics, WINDOW_LABEL[args.window])}
+${args.kind === "article" ? `These metrics count DIRECT evidence only. Contextual items are excluded from confidence and independence calculations.` : ""}
 
 CONFIDENCE CEILING (application rule): overall confidence must not exceed "${args.ceiling.band}" because ${args.ceiling.reason}.
 
@@ -144,10 +145,10 @@ ${blocks}
 ${COMPARE_FORMAT}`;
 }
 
-export function quickUser(args: { kind: "article" | "country" | "feed"; label: string; window: WindowKey; evidence: EvidenceItem[]; baselines: Baseline[]; metrics: EvidenceMetrics; ceiling: { band: string; reason: string }; statsDigest?: string; now: Date }): string {
+export function quickUser(args: { kind: "article" | "country" | "feed"; label: string; window: WindowKey; evidence: EvidenceItem[]; baselines: Baseline[]; metrics: EvidenceMetrics; ceiling: { band: string; reason: string }; statsDigest?: string; now: Date; directCount?: number }): string {
   const task =
     args.kind === "article"
-      ? `Analyse item [1] as an analyst would on first read. Item [1] is the primary subject and must control the answer. Extract 5W1H only from [1]. Use [2] onward only when they are directly relevant to the same actor, event, issue, or immediate context. Explicitly distinguish corroboration, contradiction, and background context. Ignore a related item rather than forcing it into the analysis. Never claim to have read the full article; you have the headline and excerpt only. Never output template or placeholder language.`
+      ? `Analyse item [1] as an analyst would on first read. Item [1] is the primary subject and must control the answer. Extract 5W1H only from [1]. Evidence items [1] through [${Math.max(1, args.directCount ?? 1)}] are DIRECT evidence. Items after that are CONTEXT only. DIRECT evidence may corroborate or contradict the selected item. CONTEXT may explain the broader environment but must not be described as corroboration and must not raise confidence. Ignore context that does not materially help interpretation. Never claim to have read the full article; you have the headline and excerpt only. Never output template or placeholder language.`
       : args.kind === "country"
         ? `Produce a quick country brief for ${args.label}: what changed in the window, what it may mean, and what to watch. Use the structural baselines only as context.`
         : `Produce a quick digest of the current filtered feed (${args.label}): the main storylines, cross-cutting patterns and what deserves analyst attention. Do not treat reporting volume as severity.`;

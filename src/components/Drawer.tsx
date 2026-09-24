@@ -163,7 +163,7 @@ function QuickView({ out }: { out: QuickOut }) {
       <div className="sec">
         <h4>Confidence and limits</h4>
         <p><span className={`badge ${m.confidenceAdjusted.appliedBand === "high" ? "low" : m.confidenceAdjusted.appliedBand === "moderate" ? "moderate" : "elevated"}`}>{m.confidenceAdjusted.appliedBand} confidence</span>{" "}
-          <span className="faint">{m.metrics.items} items, {m.metrics.independentStreams} independent stream(s)</span></p>
+          <span className="faint">{m.metrics.items} direct item{m.metrics.items === 1 ? "" : "s"}, {m.metrics.independentStreams} independent direct stream{m.metrics.independentStreams === 1 ? "" : "s"}</span></p>
         {m.confidenceAdjusted.capped && <p className="faint">The model proposed {m.confidenceAdjusted.modelBand}. It was capped: {m.confidenceAdjusted.reason}</p>}
         <ul>{r.caveats.map((c, i) => <li key={i}>{c}</li>)}</ul>
         <p className="faint" style={{ fontSize: 12 }}>Quick analysis is based on headlines and short excerpts only. Treat it as triage, not as a finished assessment.</p>
@@ -174,7 +174,9 @@ function QuickView({ out }: { out: QuickOut }) {
         <ol style={{ listStyle: "none", padding: 0 }}>
           {m.references.map((x) => (
             <li key={x.n} id={`qref-${x.n}`} style={{ marginBottom: 8 }}>
-              <span className="mono gold" style={{ color: "var(--gold)" }}>[{x.n}]</span> <a href={x.url} target="_blank" rel="noopener noreferrer">{x.title}</a>
+              <span className="mono gold" style={{ color: "var(--gold)" }}>[{x.n}]</span>{" "}
+              {x.role && <span className={`chip ${x.role === "direct" ? "gold" : ""}`} style={{ marginRight: 6 }}>{x.role.toUpperCase()}</span>}
+              <a href={x.url} target="_blank" rel="noopener noreferrer">{x.title}</a>
               <div className="faint" style={{ fontSize: 11.5 }}>{x.source} | {typeLabel(x.type)} | {x.band} | {new Date(x.publishedAt).toISOString().slice(0, 10)}</div>
             </li>
           ))}
