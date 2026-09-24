@@ -20,7 +20,7 @@ type Tab = "dashboard" | "analytics" | "network" | "reports" | "status";
 const TABS: { id: Tab; label: string }[] = [
   { id: "dashboard", label: "Dashboard" },
   { id: "analytics", label: "Analytics" },
-  { id: "network", label: "News Network" },
+  { id: "network", label: "News Explorer" },
   { id: "reports", label: "Reports" },
   { id: "status", label: "Sources" },
 ];
