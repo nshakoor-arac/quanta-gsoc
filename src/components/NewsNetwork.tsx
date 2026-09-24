@@ -75,8 +75,10 @@ function NetworkExplorer({ ctx }: { ctx: Ctx }) {
 
     const connected = new Map<string, Set<string>>();
     for (const l of links) {
-      const s = typeof l.source === "string" ? l.source : l.source.id;
-      const t = typeof l.target === "string" ? l.target : l.target.id;
+      // forceLink resolves endpoints to node objects during simulation; cast here because
+      // d3-force's public type still permits numeric indices after resolution.
+      const s = (l.source as N).id;
+      const t = (l.target as N).id;
       if (!connected.has(s)) connected.set(s, new Set());
       if (!connected.has(t)) connected.set(t, new Set());
       connected.get(s)!.add(t);
