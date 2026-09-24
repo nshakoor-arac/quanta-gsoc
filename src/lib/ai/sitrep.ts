@@ -397,15 +397,15 @@ function articleTerms(a: Article): Set<string> {
   );
 }
 
-function articleRelatedness(focus: Article, candidate: Article): number {
+function articleRelatedness(focus: Article, candidate: Article): { score: number; overlap: number } {
   const a = articleTerms(focus);
   const b = articleTerms(candidate);
   let overlap = 0;
   for (const t of a) if (b.has(t)) overlap++;
   const lexical = a.size ? overlap / a.size : 0;
-  const country = focus.countries.some((c) => candidate.countries.includes(c)) ? 0.2 : 0;
-  const theme = focus.themes.some((t) => candidate.themes.includes(t)) ? 0.1 : 0;
-  return lexical + country + theme;
+  const country = focus.countries.some((c) => candidate.countries.includes(c)) ? 0.12 : 0;
+  const theme = focus.themes.some((t) => candidate.themes.includes(t)) ? 0.05 : 0;
+  return { score: lexical + country + theme, overlap };
 }
 
 export interface QuickInput {
@@ -431,8 +431,8 @@ export async function runQuick(input: QuickInput): Promise<{ report: Quick; meta
     const related = await store.queryArticles({ sinceISO: sinceISO("7d"), countries: a.countries.length ? a.countries.slice(0, 2) : undefined, themes: !a.countries.length && a.themes.length ? a.themes.slice(0, 2) : undefined, limit: 200 });
     const relevant = related
       .filter((r) => r.id !== a.id)
-      .map((r) => ({ r, score: articleRelatedness(a, r) }))
-      .filter((x) => x.score >= 0.28)
+      .map((r) => ({ r, ...articleRelatedness(a, r) }))
+      .filter((x) => x.overlap >= 2 && x.score >= 0.2)
       .sort((x, y) => y.score - x.score)
       .map((x) => x.r);
     const rel = selectEvidence(relevant, { max: 5, perFamily: 2, startN: 2 });
