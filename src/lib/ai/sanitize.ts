@@ -67,11 +67,16 @@ export function auditCitations<T>(report: T, maxN: number, maxB: number, stateme
   let invalid = 0;
   const valid = (id: string) => (id.startsWith("B") ? Number(id.slice(1)) >= 1 && Number(id.slice(1)) <= maxB : Number(id) >= 1 && Number(id) <= maxN);
   const fix = (s: string) =>
-    s.replace(/\[(B?\d{1,3})\]/g, (m, id) => {
-      if (valid(id)) return m;
-      invalid++;
-      return "";
-    });
+    s
+      .replace(/\[(B?\d{1,3})\]/g, (m, id) => {
+        if (valid(id)) return m;
+        invalid++;
+        return "";
+      })
+      .replace(/\[(?:B)?n\]/gi, () => {
+        invalid++;
+        return "";
+      });
   const walk = (v: unknown): unknown => {
     if (typeof v === "string") return fix(v).replace(/\s{2,}/g, " ").trim();
     if (Array.isArray(v)) return v.map(walk);
@@ -88,10 +93,13 @@ export function auditCitations<T>(report: T, maxN: number, maxB: number, stateme
     if (citesIn(text).length) cited++;
     else uncited.push(`${label}: ${text.slice(0, 90)}`);
   };
-  for (const p of statementPaths) {
-    const v = cleaned[p];
-    if (typeof v === "string") check(p, v);
-    else if (Array.isArray(v)) for (const x of v) check(p, typeof x === "string" ? x : JSON.stringify(x));
-  }
+  const checkValue = (label: string, v: unknown) => {
+    if (typeof v === "string") check(label, v);
+    else if (Array.isArray(v)) v.forEach((x, i) => checkValue(`${label}[${i}]`, x));
+    else if (v && typeof v === "object") {
+      for (const [k, x] of Object.entries(v as Record<string, unknown>)) checkValue(`${label}.${k}`, x);
+    }
+  };
+  for (const p of statementPaths) checkValue(p, cleaned[p]);
   return { report: cleaned as T, stats: { statements, cited, invalidRemoved: invalid, uncited } };
 }
