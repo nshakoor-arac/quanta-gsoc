@@ -218,7 +218,8 @@ a.cite:hover { background: var(--gold); color: var(--obsidian); text-decoration:
   .split { display: block !important; }
   .split > * { margin-bottom: 12px; }
   .feed { max-height: none !important; overflow: visible !important; }
-  .card, .sec, .snap > div, .kwu > div, table, tr { break-inside: avoid; page-break-inside: avoid; }
+  .card, .snap > div, .kwu > div, tr { break-inside: avoid; page-break-inside: avoid; }
+  .sec, table { break-inside: auto; page-break-inside: auto; }
   .report .g3 .card, .report .g2 .card { background: #fff !important; color: #111 !important; border-color: #bbb !important; }
   .report .card .faint, .report .card p, .report .card div { color: #222 !important; }
   .report .card .eyebrow { color: #6b5420 !important; }

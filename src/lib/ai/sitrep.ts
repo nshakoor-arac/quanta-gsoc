@@ -456,7 +456,7 @@ function articleRelatedness(focus: Article, candidate: Article): { score: number
   const a = articleTerms(focus);
   const b = articleTerms(candidate);
   const anchors = titleTerms(focus);
-  const generic = new Set(["war","wars","peace","effort","efforts","statement","statements","criticism","conflict","conflicts","government","governments","army","military","attack","attacks","violence","latest","official","officials"]);
+  const generic = new Set(["war","wars","peace","effort","efforts","statement","statements","criticism","conflict","conflicts","government","governments","army","military","attack","attacks","violence","latest","official","officials","fighting","fight","fights","escalate","escalates","escalated","escalation","intensify","intensifies","intensified","rebel","rebels","force","forces","northern","region","regions"]);
   const countryTerms = new Set(
     focus.countries
       .map((iso2) => BY_ISO2[iso2]?.name ?? "")
@@ -503,7 +503,8 @@ export async function runQuick(input: QuickInput): Promise<{ report: Quick; meta
   if (input.kind === "article" && input.article) {
     const a = input.article;
     label = a.title.slice(0, 120);
-    const related = await store.queryArticles({ sinceISO: sinceISO("7d"), countries: a.countries.length ? a.countries.slice(0, 2) : undefined, themes: !a.countries.length && a.themes.length ? a.themes.slice(0, 2) : undefined, limit: 200 });
+    const relatedRaw = await store.queryArticles({ sinceISO: sinceISO("7d"), countries: a.countries.length ? a.countries.slice(0, 2) : undefined, themes: !a.countries.length && a.themes.length ? a.themes.slice(0, 2) : undefined, limit: 200 });
+    const related = a.countries.length === 1 ? relatedRaw.filter((r) => countryScopeRelevant(r, a.countries[0])) : relatedRaw;
     const scored = related
       .filter((r) => r.id !== a.id)
       .map((r) => ({ r, ...articleRelatedness(a, r) }))
