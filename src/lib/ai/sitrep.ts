@@ -73,6 +73,22 @@ function queryFor(t: ScopeTarget, w: WindowKey, limit = 600) {
   return q;
 }
 
+function countryScopeRelevant(a: Article, iso2: string): boolean {
+  if (!a.countries.includes(iso2)) return false;
+  if (a.countries[0] === iso2 || a.countries.length === 1) return true;
+  const name = (BY_ISO2[iso2]?.name ?? "").toLowerCase();
+  return !!name && a.title.toLowerCase().includes(name);
+}
+
+function dominantTheme(items: Article[]): ThemeId | null {
+  const counts = new Map<ThemeId, number>();
+  for (const a of items) for (const t of a.themes) counts.set(t, (counts.get(t) ?? 0) + 1);
+  let best: ThemeId | null = null;
+  let n = 0;
+  for (const [t, c] of counts) if (c > n) { best = t; n = c; }
+  return best;
+}
+
 /** Collects candidate articles for a scope, topping up from live aggregators when the store is thin. */
 export async function gatherCandidates(t: ScopeTarget, w: WindowKey): Promise<{ articles: Article[]; toppedUp: string[] }> {
   const store = getStore();
@@ -119,7 +135,7 @@ export async function gatherCandidates(t: ScopeTarget, w: WindowKey): Promise<{ 
     }
     articles = await store.queryArticles(queryFor(t, w));
   }
-  // GDELT country/region queries can return items whose text does not name the country; keep strict tag matches for scoped runs.
+  if (t.type === "country") articles = articles.filter((a) => countryScopeRelevant(a, t.id));
   return { articles, toppedUp };
 }
 
@@ -142,6 +158,7 @@ export interface PreparedSitrep {
   toppedUp: string[];
   id: string;
   now: Date;
+  coreCount: number;
 }
 
 export interface PreparedCompare extends Omit<PreparedSitrep, "kind"> {
@@ -162,9 +179,23 @@ function baselineCountries(targets: ScopeTarget[]): string[] {
 export async function prepareSitrep(target: ScopeTarget, window: WindowKey, pinned: PinnedIn[]): Promise<PreparedSitrep> {
   const now = new Date();
   const { articles, toppedUp } = await gatherCandidates(target, window);
-  const evidence = selectEvidence(articles, { max: 36, pinned, perFamily: target.type === "global" ? 3 : 4, perCountry: target.type === "global" ? 4 : 999 });
+  const relevantPins = target.type === "country" ? pinned.filter((p) => countryScopeRelevant(p.article, target.id)) : pinned;
+  let evidence: EvidenceItem[];
+  let coreEvidence: EvidenceItem[];
+  if (target.type === "country") {
+    const dominant = dominantTheme(articles);
+    const corePool = dominant ? articles.filter((a) => a.themes.includes(dominant)) : articles;
+    coreEvidence = selectEvidence(corePool, { max: 24, pinned: relevantPins, perFamily: 3 });
+    const coreIds = new Set(coreEvidence.map((e) => e.article.id));
+    const contextPool = articles.filter((a) => !coreIds.has(a.id) && (!dominant || !a.themes.includes(dominant)));
+    const context = selectEvidence(contextPool, { max: 8, perFamily: 2, startN: coreEvidence.length + 1 });
+    evidence = [...coreEvidence, ...context];
+  } else {
+    evidence = selectEvidence(articles, { max: 36, pinned: relevantPins, perFamily: target.type === "global" ? 3 : 4, perCountry: target.type === "global" ? 4 : 999 });
+    coreEvidence = evidence;
+  }
   const baselines = await baselinesFor(baselineCountries([target]));
-  const metrics = computeMetrics(evidence);
+  const metrics = computeMetrics(coreEvidence);
   const ceiling = confidenceCeiling(metrics);
   const label = scopeLabel(target);
   return {
@@ -177,10 +208,11 @@ export async function prepareSitrep(target: ScopeTarget, window: WindowKey, pinn
     metrics,
     ceiling,
     system: `${KERNEL}\n\n${SITREP_FORMAT}`,
-    user: sitrepUser({ scopeLabel: label, scopeKind: target.type, window, evidence, baselines, metrics, ceiling, now }),
+    user: sitrepUser({ scopeLabel: label, scopeKind: target.type, window, evidence, baselines, metrics, ceiling, now, coreCount: coreEvidence.length }),
     toppedUp,
     id: docId("SITREP", [target], now),
     now,
+    coreCount: coreEvidence.length,
   };
 }
 
@@ -250,7 +282,7 @@ export interface ReferenceRow {
   url: string;
   family: string;
   pinned: boolean;
-  role?: "direct" | "context";
+  role?: "direct" | "core" | "context";
 }
 
 export function buildReferences(ev: EvidenceItem[]): ReferenceRow[] {
@@ -288,7 +320,7 @@ export interface FinalMeta {
   perTarget?: { label: string; items: number; streams: number }[];
 }
 
-const SITREP_STATEMENTS = ["key_judgment", "threat_rationale", "situation_overview", "key_developments", "assessment", "strategic_implications", "priority_points", "actor_dynamics", "know", "assess"];
+const SITREP_STATEMENTS = ["key_judgment", "threat_rationale", "situation_overview", "key_developments", "assessment", "strategic_implications", "priority_points", "actor_dynamics", "risks", "near_term_outlook", "know", "assess"];
 const COMPARE_STATEMENTS = ["key_judgment", "convergences", "divergences", "implications", "know", "assess"];
 
 async function parseWithRepair<S extends z.ZodType>(schema: S, schemaName: string, raw: string, system: string): Promise<{ data: z.infer<S>; usageExtra: { prompt: number; completion: number } }> {
@@ -327,6 +359,7 @@ export async function finaliseSitrep(prep: PreparedSitrep, raw: string, usage: {
   const adj = applyCeiling(report.confidence.band, prep.metrics);
   report.confidence.band = adj.band;
   report.risks = report.risks.map((r) => ({ ...r, likelihood: clamp15(r.likelihood), impact: clamp15(r.impact) }));
+  report.near_term_outlook = cohereScenarioBands(report.near_term_outlook);
   return {
     report,
     meta: {
@@ -342,7 +375,7 @@ export async function finaliseSitrep(prep: PreparedSitrep, raw: string, usage: {
       citation: audited.stats,
       toppedUp: prep.toppedUp,
       baselines: prep.baselines,
-      references: buildReferences(prep.evidence),
+      references: buildReferences(prep.evidence).map((r) => ({ ...r, role: r.n <= prep.coreCount ? "core" as const : "context" as const })),
       scope: prep.targets,
     },
   };
@@ -380,6 +413,16 @@ export async function finaliseCompare(prep: PreparedCompare, raw: string, usage:
 function clamp15(n: number) {
   const v = Math.round(Number(n));
   return Number.isFinite(v) ? Math.min(5, Math.max(1, v)) : 3;
+}
+
+function cohereScenarioBands(rows: Sitrep["near_term_outlook"]): Sitrep["near_term_outlook"] {
+  const high = new Set(["Likely (55-80%)", "Very likely (80-95%)", "Almost certain (95-99%)"]);
+  const rank = (b: string) => b.startsWith("Almost certain") ? 3 : b.startsWith("Very likely") ? 2 : b.startsWith("Likely") ? 1 : 0;
+  const highs = rows.map((r, i) => ({ r, i })).filter((x) => high.has(x.r.probability_band));
+  if (highs.length <= 1) return rows;
+  highs.sort((a, b) => rank(b.r.probability_band) - rank(a.r.probability_band) || (a.r.scenario === "base" ? -1 : b.r.scenario === "base" ? 1 : a.i - b.i));
+  const keep = highs[0].i;
+  return rows.map((r, i) => i === keep || !high.has(r.probability_band) ? r : { ...r, probability_band: "Unlikely (20-45%)" });
 }
 
 /* ------------------------------------------------------------------
@@ -474,7 +517,7 @@ export async function runQuick(input: QuickInput): Promise<{ report: Quick; meta
       // Require at least two meaningful terms from the selected item's title to recur
       // in the candidate title/excerpt. This prevents broad "Iran war" context from
       // inflating corroboration for a specific Hormuz transit report.
-      .filter((x) => x.titleAnchorOverlap >= 2 && x.specificAnchorOverlap >= 1 && x.overlap >= 2)
+      .filter((x) => x.titleAnchorOverlap >= 2 && x.specificAnchorOverlap >= 2 && x.overlap >= 2)
       .map((x) => x.r);
     const directRel = selectEvidence(directCandidates, { max: 3, perFamily: 1, startN: 2 });
     const directIds = new Set(directRel.map((e) => e.article.id));

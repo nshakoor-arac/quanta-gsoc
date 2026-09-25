@@ -26,16 +26,16 @@ export const SITREP_FORMAT = `FIELD GUIDE (QAP executive SitRep)
 - situation_overview: 2 to 4 sentences. What is happening.
 - key_developments: 3 to 5 items, one or two sentences each. What changed and why it matters.
 - assessment: 2 to 4 sentences. The analytic judgment and its logic.
-- strategic_implications: 2 to 4 sentences. Why it matters operationally, politically or commercially.
+- strategic_implications: 2 to 4 sentences. Why it matters operationally, politically or commercially. Distinguish observed effects from prospective risk. Do not write that an effect "will" occur unless an evidence item directly establishes it; use conditional language such as "could", "may", or "would increase risk" for forward-looking implications.
 - priority_points: 3 short items. actor_dynamics: 2 or 3 short items, naming actors only as the evidence names them.
 - risks: 3 to 5 items. likelihood and impact are integers from 1 to 5. mitigant is one short clause.
 - action_items: 4 to 6 items spread across horizons 0-72H, 3-30D, 30-180D. Each is concrete and assignable.
 - collection_gaps: 3 items, each stating what to collect and why.
-- near_term_outlook: exactly 3 scenarios (best, base, worst). probability_band uses this scale only: Almost no chance (1-5%), Very unlikely (5-20%), Unlikely (20-45%), Roughly even chance (45-55%), Likely (55-80%), Very likely (80-95%), Almost certain (95-99%). Give a named trigger for each.
+- near_term_outlook: exactly 3 mutually exclusive scenarios (best, base, worst). probability_band uses this scale only: Almost no chance (1-5%), Very unlikely (5-20%), Unlikely (20-45%), Roughly even chance (45-55%), Likely (55-80%), Very likely (80-95%), Almost certain (95-99%). At most one scenario may be above 55%. Give a named trigger for each and cite factual premises in scenario descriptions where applicable.
 - know: 4 to 8 facts. assess: 3 to 6 inferences. unknown: 3 to 5 gaps (no citation needed).
 - assumptions: 2 or 3 load-bearing assumptions with ids A1, A2, A3.
 - indicators: 4 to 6 indicators and warnings with direction, threshold and cadence.
-- confidence: band (high | moderate | low), at least 3 reasons tied to evidence quality, and exactly 3 flip_risks that could reverse the assessment.`;
+- confidence: band (high | moderate | low), at least 3 reasons tied to evidence quality, and exactly 3 flip_risks that could reverse the assessment. High confidence requires CORE evidence that directly corroborates the principal key judgment across genuinely independent streams with no material unresolved contradiction. Evidence volume alone is insufficient.`;
 
 export const COMPARE_FORMAT = `FIELD GUIDE (QAP comparative assessment)
 - title: ALL CAPS statement of the main comparative finding, at most 14 words.
@@ -93,15 +93,17 @@ function fmtMetrics(m: EvidenceMetrics, windowLabel: string): string {
 
 export const WINDOW_LABEL: Record<WindowKey, string> = { "24h": "last 24 hours", "72h": "last 72 hours", "7d": "last 7 days", "30d": "last 30 days" };
 
-export function sitrepUser(args: { scopeLabel: string; scopeKind: string; window: WindowKey; evidence: EvidenceItem[]; baselines: Baseline[]; metrics: EvidenceMetrics; ceiling: { band: string; reason: string }; now: Date }): string {
+export function sitrepUser(args: { scopeLabel: string; scopeKind: string; window: WindowKey; evidence: EvidenceItem[]; baselines: Baseline[]; metrics: EvidenceMetrics; ceiling: { band: string; reason: string }; now: Date; coreCount: number }): string {
   return `TASK: Produce a QAP executive SitRep as one JSON object.
 SCOPE TYPE: ${args.scopeKind}
 SCOPE: ${args.scopeLabel}
 ANALYSIS WINDOW: ${WINDOW_LABEL[args.window]}
 NOW (UTC): ${args.now.toISOString().slice(0, 16)}Z
 
-EVIDENCE BASE METRICS (computed by the application, do not alter):
+CORE EVIDENCE METRICS (computed by the application, do not alter):
 ${fmtMetrics(args.metrics, WINDOW_LABEL[args.window])}
+
+EVIDENCE ROLE RULE: items [1] through [${args.coreCount}] are CORE evidence. Items after [${args.coreCount}] are CONTEXT only. Context can inform interpretation but cannot establish the key judgment, raise confidence, or be described as corroboration.
 
 CONFIDENCE CEILING (application rule): overall confidence must not exceed "${args.ceiling.band}" because ${args.ceiling.reason}.
 

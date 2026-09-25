@@ -123,7 +123,7 @@ export default function Reports({ ctx, seed, clearSeed }: { ctx: Ctx; seed: Scop
         else if (ev === "prepared") setPrep(d);
         else if (ev === "delta") { setChars((n) => n + d.text.length); setTail((t) => (t + d.text).slice(-600)); }
         else if (ev === "error") setErr(d.message);
-        else if (ev === "done") { got = true; setView({ id: d.id, kind: mode, report: d.report, meta: d.meta, analyst: d.analyst, createdAt: d.createdAt }); void loadHist(); }
+        else if (ev === "done") { got = true; setView({ id: d.id, kind: mode, report: d.report, meta: d.meta, analyst: d.analyst, createdAt: d.createdAt }); void loadHist(); window.dispatchEvent(new Event("gsoc:data-refresh")); }
       }, ctl.signal);
       if (!got && !err) setErr((e) => e || "The stream ended before a report was returned. Try again.");
     } catch (e) {

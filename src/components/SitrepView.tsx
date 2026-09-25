@@ -50,7 +50,7 @@ export default function SitrepView({ v }: { v: ReportView }) {
         <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <Badge level={r.threat_level} />
           <span className={`badge ${m.confidenceAdjusted.appliedBand === "high" ? "low" : m.confidenceAdjusted.appliedBand === "moderate" ? "moderate" : "elevated"}`}>{m.confidenceAdjusted.appliedBand} confidence</span>
-          <span className="faint mono" style={{ fontSize: 11 }}>Window {m.window} | {m.metrics.items} items | {m.metrics.independentStreams} independent streams | {new Date(v.createdAt).toUTCString().replace("GMT", "UTC")} | {v.analyst}</span>
+          <span className="faint mono" style={{ fontSize: 11 }}>Window {m.window} | {m.metrics.items} core items | {m.metrics.independentStreams} independent core streams | {new Date(v.createdAt).toUTCString().replace("GMT", "UTC")} | {v.analyst}</span>
         </div>
         <div className="no-print" style={{ display: "flex", gap: 8, marginTop: 14, flexWrap: "wrap" }}>
           <button className="btn sm" onClick={() => window.print()}><Printer size={12} /> Print or save PDF</button>
@@ -142,7 +142,7 @@ export default function SitrepView({ v }: { v: ReportView }) {
           <Sec t="Structural baselines (lagged, not current-event evidence)">
             <div className="scroll-x"><table className="t"><thead><tr><th>Code</th><th>Country</th><th>Indicator</th><th>Value</th><th>Year</th></tr></thead>
               <tbody>{m.baselines.map((b) => <tr key={b.code} id={`ref-${b.code}`}><td className="mono" style={{ color: "var(--gold)" }}>[{b.code}]</td><td>{b.iso2}</td><td>{b.label}</td><td className="mono">{b.value}</td><td className="mono">{b.year}</td></tr>)}</tbody></table></div>
-            <p className="faint" style={{ fontSize: 12, marginBottom: 0 }}>Source: World Bank, Worldwide Governance Indicators, 0 to 100 scale, higher is better. Annual data lags current events.</p>
+            <p className="faint" style={{ fontSize: 12, marginBottom: 0 }}>Sources: {[...new Set(m.baselines.map((b) => b.source))].join("; ")}. Baselines are contextual and may use different scales or reference periods; they do not establish current events.</p>
           </Sec>
         )}
 
@@ -151,7 +151,7 @@ export default function SitrepView({ v }: { v: ReportView }) {
             <tbody>{m.references.map((x) => (
               <tr key={x.n} id={`ref-${x.n}`}>
                 <td className="mono" style={{ color: "var(--gold)" }}>[{x.n}]</td>
-                <td><a href={x.url} target="_blank" rel="noopener noreferrer">{x.title}</a>{x.pinned && <span className="chip gold" style={{ marginLeft: 6 }}>pinned</span>}</td>
+                <td>{x.role && <span className={`chip ${x.role === "core" || x.role === "direct" ? "gold" : ""}`} style={{ marginRight: 6 }}>{x.role.toUpperCase()}</span>}<a href={x.url} target="_blank" rel="noopener noreferrer">{x.title}</a>{x.pinned && <span className="chip gold" style={{ marginLeft: 6 }}>pinned</span>}</td>
                 <td>{x.source}<div className="faint mono" style={{ fontSize: 10.5 }}>{x.domain}</div></td>
                 <td>{typeLabel(x.type)}</td>
                 <td><span className={`dot ${x.band === "unrated" ? "" : x.band}`} /> {x.band}{x.band !== x.provisionalBand && <span className="faint"> (was {x.provisionalBand})</span>}</td>

@@ -209,10 +209,18 @@ a.cite:hover { background: var(--gold); color: var(--obsidian); text-decoration:
 }
 @media print {
   .topbar, .foot, .no-print, .veil { display: none !important; }
-  html, body { background: #fff; color: #111; }
+  html, body { background: #fff; color: #111; overflow: visible !important; }
   .main { padding: 0; max-width: none; }
   .report, .rep-head { background: #fff; border-color: #ccc; }
   .sec, .snap > div, .kwu > div { border-color: #ccc; background: #fff; }
   a, .eyebrow, .sec h4, .snap .f { color: #6b5420 !important; }
   .bluf { color: #111; }
+  .split { display: block !important; }
+  .split > * { margin-bottom: 12px; }
+  .feed { max-height: none !important; overflow: visible !important; }
+  .card, .sec, .snap > div, .kwu > div, table, tr { break-inside: avoid; page-break-inside: avoid; }
+  .report .g3 .card, .report .g2 .card { background: #fff !important; color: #111 !important; border-color: #bbb !important; }
+  .report .card .faint, .report .card p, .report .card div { color: #222 !important; }
+  .report .card .eyebrow { color: #6b5420 !important; }
+  .scroll-x { overflow: visible !important; }
 }

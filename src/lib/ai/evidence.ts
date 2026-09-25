@@ -157,9 +157,10 @@ const ORDER: ConfidenceBand[] = ["low", "moderate", "high"];
 /** Highest confidence the evidence base can support, independent of what the model claims. */
 export function confidenceCeiling(m: EvidenceMetrics): { band: ConfidenceBand; reason: string } {
   if (m.items < 3 || m.independentStreams < 2) return { band: "low", reason: `only ${m.independentStreams} independent stream(s) across ${m.items} item(s)` };
-  if (m.independentStreams < 4 || m.items < 8) return { band: "moderate", reason: `${m.independentStreams} independent streams across ${m.items} items is below the threshold for high confidence (4 streams, 8 items)` };
-  if (m.greenShare < 0.3) return { band: "moderate", reason: "fewer than 30 percent of items are in the Green band" };
-  return { band: "high", reason: "evidence base meets the high-confidence threshold (4+ independent streams, 8+ items, 30%+ Green)" };
+  if (m.independentStreams < 5 || m.items < 10) return { band: "moderate", reason: `${m.independentStreams} independent streams across ${m.items} core items is below the high-confidence threshold (5 streams, 10 core items)` };
+  if (m.greenShare < 0.4) return { band: "moderate", reason: "fewer than 40 percent of core items are in the Green band" };
+  if (m.sourceTypes < 2) return { band: "moderate", reason: "core evidence does not span at least two source types" };
+  return { band: "high", reason: "core evidence meets the high-confidence threshold (5+ independent streams, 10+ core items, 40%+ Green, 2+ source types)" };
 }
 
 export function applyCeiling(claimed: ConfidenceBand, m: EvidenceMetrics): { band: ConfidenceBand; capped: boolean; reason: string } {

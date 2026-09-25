@@ -59,6 +59,11 @@ export default function Console({ analyst }: { analyst: string }) {
     return () => clearInterval(t);
   }, [win, load]);
   useEffect(() => {
+    const refresh = () => void load(win, true);
+    window.addEventListener("gsoc:data-refresh", refresh);
+    return () => window.removeEventListener("gsoc:data-refresh", refresh);
+  }, [win, load]);
+  useEffect(() => {
     try { const s = sessionStorage.getItem("gsoc-pins"); if (s) setPinned(JSON.parse(s)); } catch { /* ignore */ }
   }, []);
   useEffect(() => {
