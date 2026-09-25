@@ -161,7 +161,7 @@ export interface PreparedSitrep {
   coreCount: number;
 }
 
-export interface PreparedCompare extends Omit<PreparedSitrep, "kind"> {
+export interface PreparedCompare extends Omit<PreparedSitrep, "kind" | "coreCount"> {
   kind: "compare";
   perTarget: { label: string; items: number; streams: number }[];
   groups: { label: string; evidence: EvidenceItem[] }[];
